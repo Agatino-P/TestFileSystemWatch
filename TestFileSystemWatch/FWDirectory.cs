@@ -26,10 +26,8 @@ namespace TestFileSystemWatcher
                 _extension = extension;
             }
 
-            public void Populate()
+            public void Populate() //this doesn't notify
             {
-                _files.Clear();
-                _subDirs.Clear();
                 try
                 {
                     DirectoryInfo dirInfo = new DirectoryInfo(_fullPath);
@@ -39,7 +37,7 @@ namespace TestFileSystemWatcher
                         _files.Add(file);
                     }
 
-                    foreach (var subDir in dirInfo.GetDirectories())
+                    foreach (DirectoryInfo subDir in dirInfo.GetDirectories())
                     {
                         FWDirectory newSubDir = new FWDirectory(subDir.FullName, _extension, _notifyAction);
                         _subDirs.Add(subDir.FullName, newSubDir);
@@ -48,23 +46,11 @@ namespace TestFileSystemWatcher
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine(ex.Message);
+                    logException(ex);
                 }
 
             }
 
-            private void Clear()
-            {
-                foreach (FWDirectory subDir in _subDirs.Values)
-                {
-                    subDir.Clear();
-                }
-                foreach (string file in _files)
-                {
-                    delFile(file);
-                }
-            }
-            
             public ReadOnlyCollection<string> GetAllFiles()
             {
                 List<string> allfiles = new List<string>(_files);
@@ -81,34 +67,18 @@ namespace TestFileSystemWatcher
             {
                 try
                 {
-                    if (string.IsNullOrEmpty(Path.GetExtension(fullPath))) //assume a directory
+                    //if (Path.GetExtension(fullPath) == _extension)
+                    //{
+                    if (!File.Exists(fullPath))
                     {
-                        FWDirectory subDir = getSubDir(fullPath);
-                        if (subDir != null)
-                        {
-                            if (File.Exists(fullPath))
-                            {
-                                //We need to check if all subfolders are still there
-                                subDir.confirmSubDir();
-                            }
-                            else
-                            {
-                                delSubDir(fullPath);
-                            }
-                        }
+                        delFile(fullPath);
                     }
-
-                    if (Path.GetExtension(fullPath) == _extension)
+                    else
                     {
-                        if (File.Exists(fullPath))
-                        {
-                            notifyFileChange(fullPath);
-                        }
-                        else
-                        {
-                            delFile(fullPath);
-                        }
+                        addFile(fullPath);
                     }
+                    notifyFileChange(fullPath);
+                    //}
                 }
                 catch
                 {
@@ -118,27 +88,25 @@ namespace TestFileSystemWatcher
 
             public void OnDirectoryChange(string fullPath)
             {
-                try
+                List<string> oldFiles = new List<string>(_files); //saving this to avoid double notifications
+                clearAll();
+                Populate();
+                List<string> newFiles = GetAllFiles().ToList();
+                List<string> mergedList = oldFiles.Union(newFiles).ToList();
+                foreach(string file in mergedList)
                 {
-                        FWDirectory subDir = getSubDir(fullPath);
-                        if (subDir != null)
-                        {
-                            if (File.Exists(fullPath))
-                            {
-                                //We need to check if all subfolders are still there
-                                subDir.confirmSubDir();
-                            }
-                            else
-                            {
-                                delSubDir(fullPath);
-                            }
-                        }
-
+                    notifyFileChange(file);
                 }
-                catch
+            }
+
+            private void clearAll() //this doesn't notify
+            {
+                _files.Clear();
+                foreach(FWDirectory subdir in _subDirs.Values)
                 {
-
+                    subdir.clearAll();
                 }
+
             }
             #endregion Changes
 
@@ -160,7 +128,7 @@ namespace TestFileSystemWatcher
                     notifyFileChange(fullPath);
                 }
             }
-            private void delFile(string fullPath)
+            private void delFile(string fullPath) //notifies accordingly
             {
                 if ((_files.Contains(fullPath)))
                 {
@@ -177,25 +145,19 @@ namespace TestFileSystemWatcher
                         {
                             subDir.delFile(fullPath);
                         }
-
-
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-
-
+                        logException(ex);
                     }
-
                 }
             }
+
             //renFile is managed as Delete and Add
             #endregion FileMethods
-            
+
             #region SubDirMethods
-            private void confirmSubDir()
-            {
-                throw new NotImplementedException();
-            }
+
             private void addSubDir(string fullPath)
             {
                 if (_subDirs.ContainsKey(fullPath))
@@ -210,7 +172,7 @@ namespace TestFileSystemWatcher
                 {
                     return;
                 }
-                targetDir.Clear();
+                targetDir.clear();
             }
             #endregion SubDirMethods
 
@@ -235,16 +197,35 @@ namespace TestFileSystemWatcher
                 }
                 return null;
             }
+
+            private void clear()
+            {
+                foreach (FWDirectory subDir in _subDirs.Values)
+                {
+                    subDir.clear();
+                }
+                foreach (string file in _files)
+                {
+                    delFile(file);
+                }
+            }
+
+
             #endregion Utility
 
             #endregion Private
 
+            #region Logging
+            private void log(string text)
+            {
+                Debug.Print(text);
+            }
 
-
-
-
-
-
+            private void logException(Exception ex)
+            {
+                Debug.Print(ex.Message);
+            }
+            #endregion Logging
         }
     }
 }

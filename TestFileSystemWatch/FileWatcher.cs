@@ -24,8 +24,8 @@ namespace TestFileSystemWatcher
         private string _extension;
         private Action<string> _notifyAction;
 
-        private FileSystemWatcher _fswDirectories;
         private FileSystemWatcher _fswFiles;
+        private FileSystemWatcher _fswDirectories;
 
         private System.Timers.Timer _timer;
         private List<string> _fileChanges = new List<string>();
@@ -60,9 +60,9 @@ namespace TestFileSystemWatcher
                     _fswFiles = new FileSystemWatcher(_rootFolderPath)
                     {
                         IncludeSubdirectories = true,
-                        NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+                        NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size ,
                         EnableRaisingEvents = true,
-                        Filter = _extension
+                        Filter = "*"+_extension
                     };
                     _fswFiles.Created += onOneFileEvent;
                     _fswFiles.Changed += onOneFileEvent;
@@ -91,7 +91,7 @@ namespace TestFileSystemWatcher
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message);
+                logException(ex);
             }
 
         }
@@ -124,7 +124,7 @@ namespace TestFileSystemWatcher
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message);
+                logException(ex);
             }
         }
 
@@ -155,13 +155,11 @@ namespace TestFileSystemWatcher
 
         private void onFileErrorEvent(object sender, ErrorEventArgs e)
         {
-            Debug.Print($"{DateTime.Now}: Eror on FileSystemWatcher");
+            log("Error on FileSystemWatcher");
         }
 
         private void onOneFileEvent(object sender, FileSystemEventArgs e)
         {
-            Debug.Print($"{e.FullPath} {e.ChangeType}");
-
             lock (lockObj)
             {
                 if (sender == null)
@@ -186,8 +184,6 @@ namespace TestFileSystemWatcher
                     return;
                 }
 
-                Debug.Print($"{e.OldFullPath} {e.FullPath} {e.ChangeType}");
-
                 if (!_fileChanges.Contains(e.OldFullPath))
                 {
                     _fileChanges.Add(e.OldFullPath);
@@ -206,13 +202,11 @@ namespace TestFileSystemWatcher
         #region DirectoryWatcherEvents
         private void onDirectoryErrorEvent(object sender, ErrorEventArgs e)
         {
-            Debug.Print($"{DateTime.Now}: Eror on FileSystemWatcher");
+            log("Error on FileSystemWatcher");
         }
 
         private void onOneDirectoryEvent(object sender, FileSystemEventArgs e)
         {
-            Debug.Print($"{e.FullPath} {e.ChangeType}");
-
             lock (lockObj)
             {
                 if (sender == null)
@@ -236,8 +230,6 @@ namespace TestFileSystemWatcher
                 {
                     return;
                 }
-
-                Debug.Print($"{e.OldFullPath} {e.FullPath} {e.ChangeType}");
 
                 if (!_directoryChanges.Contains(e.OldFullPath))
                 {
@@ -266,18 +258,28 @@ namespace TestFileSystemWatcher
                 {
                     _rootFswDirectory.OnFileChange(_fileChanges[0]);
                     _fileChanges.RemoveAt(0);
-                    _notifyAction(_fileChanges[0]);
+                    //_notifyAction(_fileChanges[0]);
                 }
 
                 while (_directoryChanges.Count > 0)
                 {
                     _rootFswDirectory.OnDirectoryChange(_directoryChanges[0]);
                     _directoryChanges.RemoveAt(0);
-                    _notifyAction(_directoryChanges[0]);
+                    //_notifyAction(_directoryChanges[0]);
                 }
             }
 
             this._timer.Start();
+        }
+
+        private void log(string text)
+        {
+            Debug.Print(text);
+        }
+
+        private void logException(Exception ex)
+        {
+            Debug.Print(ex.Message);
         }
     }
 }

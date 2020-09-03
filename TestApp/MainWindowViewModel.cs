@@ -39,37 +39,42 @@ namespace TestApp
 
 
 
-        IFileWatcher _fSysWatcher;
+        IFileWatcher _fileWatcher;
 
 
 
         private RelayCommand _startCmd;
         public RelayCommand StartCmd => _startCmd ?? (_startCmd = new RelayCommand(
             () => start(),
-            () => _fSysWatcher == null,
+            () => _fileWatcher == null,
             keepTargetAlive: true
             ));
         private void start()
         {
-            _fSysWatcher = new FileWatcher(_folder, _extension, _timerMS,
-               (s) => DispatcherHelper.CheckBeginInvokeOnUI(()=> Messenger.Default.Send<string>(s, "FileSystemChange"))
+            _fileWatcher = new FileWatcher(_folder, _extension, _timerMS,
+               (s) => notifyChange(s)
                
                );
-            _fSysWatcher.Start();
+            _fileWatcher.Start();
         }
 
-       
+private void notifyChange(string fileId)
+        {
+            DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<string>(fileId, "FileSystemChange"));
+            DispatcherHelper.CheckBeginInvokeOnUI(() => Changes.Add(fileId));
+            
+        }
 
         private RelayCommand _stopCmd;
         public RelayCommand StopCmd => _stopCmd ?? (_stopCmd = new RelayCommand(
             () => stop(),
-            () => _fSysWatcher != null,
+            () => _fileWatcher != null,
             keepTargetAlive: true
             ));
         private void stop()
         {
-            _fSysWatcher.Stop();
-            _fSysWatcher = null;
+            _fileWatcher.Stop();
+            _fileWatcher = null;
         }
 
 
