@@ -30,8 +30,12 @@ namespace TestFileSystemWatcher
             {
                 try
                 {
-                    DirectoryInfo dirInfo = new DirectoryInfo(_fullPath);
+                    if (!Directory.Exists(_fullPath))
+                    {
+                        return;
+                    }
 
+                    DirectoryInfo dirInfo = new DirectoryInfo(_fullPath);
                     foreach (string file in dirInfo.GetFiles().Select(f => f.FullName))
                     {
                         _files.Add(file);
@@ -71,14 +75,12 @@ namespace TestFileSystemWatcher
                     //{
                     if (!File.Exists(fullPath))
                     {
-                        delFile(fullPath);
+                        delFileAndNotify(fullPath);
                     }
                     else
                     {
-                        addFile(fullPath);
+                        addFileAndNotify(fullPath);
                     }
-                    notifyFileChange(fullPath);
-                    //}
                 }
                 catch
                 {
@@ -88,12 +90,24 @@ namespace TestFileSystemWatcher
 
             public void OnDirectoryChange(string fullPath)
             {
-                List<string> oldFiles = new List<string>(_files); //saving this to avoid double notifications
+                if (fullPath != this._fullPath)
+                {
+                    getSubDir(fullPath)?.OnDirectoryChange(fullPath);
+                    return;
+                }
+                
+                if (!Directory.Exists(_fullPath))
+                {
+                    FWDirectory parentDir = getParentDir(_fullPath);
+                    parentDir.delSubDir(_fullPath)
+                }
+
+                List<string> oldFiles = new List<string>(GetAllFiles()); //saving this to avoid double notifications
                 clearAll();
                 Populate();
                 List<string> newFiles = GetAllFiles().ToList();
                 List<string> mergedList = oldFiles.Union(newFiles).ToList();
-                foreach(string file in mergedList)
+                foreach (string file in mergedList)
                 {
                     notifyFileChange(file);
                 }
@@ -102,7 +116,7 @@ namespace TestFileSystemWatcher
             private void clearAll() //this doesn't notify
             {
                 _files.Clear();
-                foreach(FWDirectory subdir in _subDirs.Values)
+                foreach (FWDirectory subdir in _subDirs.Values)
                 {
                     subdir.clearAll();
                 }
@@ -120,7 +134,7 @@ namespace TestFileSystemWatcher
             #endregion Notification
 
             #region FileMethods
-            private void addFile(string fullPath)
+            private void addFileAndNotify(string fullPath)
             {
                 if (!(_files.Contains(fullPath)))
                 {
@@ -128,7 +142,7 @@ namespace TestFileSystemWatcher
                     notifyFileChange(fullPath);
                 }
             }
-            private void delFile(string fullPath) //notifies accordingly
+            private void delFileAndNotify(string fullPath) //notifies accordingly
             {
                 if ((_files.Contains(fullPath)))
                 {
@@ -143,7 +157,7 @@ namespace TestFileSystemWatcher
                         FWDirectory subDir = getSubDir(dirPath);
                         if (subDir != null)
                         {
-                            subDir.delFile(fullPath);
+                            subDir.delFileAndNotify(fullPath);
                         }
                     }
                     catch (Exception ex)
@@ -179,24 +193,17 @@ namespace TestFileSystemWatcher
             #region Utility
             private FWDirectory getSubDir(string fullPath)
             {
-                //Leverage Dictionary??
-                foreach (FWDirectory subdir in _subDirs.Values)
-                {
-                    if (subdir._fullPath == fullPath)
-                    {
-                        return subdir;
-                    }
-                    else
-                    {
-                        FWDirectory foundDir = subdir.getSubDir(fullPath);
-                        if (foundDir != null)
-                        {
-                            return foundDir;
-                        }
-                    }
-                }
+                if (_subDirs.ContainsKey(fullPath))
+                    return _subDirs[fullPath];
                 return null;
             }
+
+            private FWDirectory getParentDir(string fullPath)
+            {
+                string parentPath = Path.GetFileName(Path.GetDirectoryName(fullPath));
+                return getSubDir(parentPath);
+            }
+
 
             private void clear()
             {
@@ -206,7 +213,7 @@ namespace TestFileSystemWatcher
                 }
                 foreach (string file in _files)
                 {
-                    delFile(file);
+                    delFileAndNotify(file);
                 }
             }
 

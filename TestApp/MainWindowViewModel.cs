@@ -61,7 +61,7 @@ namespace TestApp
 private void notifyChange(string fileId)
         {
             DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<string>(fileId, "FileSystemChange"));
-            DispatcherHelper.CheckBeginInvokeOnUI(() => Changes.Add(fileId));
+            //DispatcherHelper.CheckBeginInvokeOnUI(() => Changes.Add(fileId));
             
         }
 
