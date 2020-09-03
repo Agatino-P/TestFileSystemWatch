@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TestFileSystemWatch
 {
-    public interface IFSysWatcher
+    public interface IFileWatcher
     {
         void Start();
         void Stop();

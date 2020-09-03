@@ -40,8 +40,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FSysWatcher.cs" />
-    <Compile Include="IFSysWatcher.cs" />
+    <Compile Include="FWDirectory.cs" />
+    <Compile Include="FileWatcher.cs" />
+    <Compile Include="IFileWatcher.cs" />
+    <Compile Include="PathExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -39,7 +39,7 @@ namespace TestApp
 
 
 
-        IFSysWatcher _fSysWatcher;
+        IFileWatcher _fSysWatcher;
 
 
 
@@ -51,7 +51,7 @@ namespace TestApp
             ));
         private void start()
         {
-            _fSysWatcher = new FSysWatcher(_folder, _extension, _timerMS,
+            _fSysWatcher = new FileWatcher(_folder, _extension, _timerMS,
                (s) => DispatcherHelper.CheckBeginInvokeOnUI(()=> Messenger.Default.Send<string>(s, "FileSystemChange"))
                
                );
