@@ -2,16 +2,19 @@
 using GalaSoft.MvvmLight.Command;
 using GalaSoft.MvvmLight.Messaging;
 using GalaSoft.MvvmLight.Threading;
+using MecalFileWatcher;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using TestFileSystemWatch;
-using TestFileSystemWatcher;
+
+
 
 namespace TestApp
 {
     public class MainWindowViewModel : ViewModelBase
     {
+        IFileWatcher _fileWatcher;
+
         private string _folder = @"D:\0_temp";
         public string Folder { get => _folder; set { Set(() => Folder, ref _folder, value); } }
         private string _extension = @".txt";
@@ -38,11 +41,6 @@ namespace TestApp
 
 
 
-
-        IFileWatcher _fileWatcher;
-
-
-
         private RelayCommand _startCmd;
         public RelayCommand StartCmd => _startCmd ?? (_startCmd = new RelayCommand(
             () => start(),
@@ -52,8 +50,7 @@ namespace TestApp
         private void start()
         {
             _fileWatcher = new FileWatcher(_folder, _extension, _timerMS,
-               (s) => notifyChange(s)
-               
+               (s) => notifyChanges(s)
                );
             _fileWatcher.Start();
         }
@@ -71,11 +68,11 @@ namespace TestApp
             _fileWatcher = null;
         }
 
-private void notifyChange(string fileId)
+        private void notifyChanges(IEnumerable<string> fileIds)
         {
-            DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<string>(fileId, "FileSystemChange"));
+            DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<IEnumerable<string>>(fileIds, "FileSystemChange"));
             //DispatcherHelper.CheckBeginInvokeOnUI(() => Changes.Add(fileId));
-            
+
         }
 
 

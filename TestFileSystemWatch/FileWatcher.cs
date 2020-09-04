@@ -4,9 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Timers;
-using TestFileSystemWatch;
 
-namespace TestFileSystemWatcher
+namespace MecalFileWatcher
 {
     public partial class FileWatcher : IFileWatcher
     {
@@ -19,12 +18,12 @@ namespace TestFileSystemWatcher
 
         #region Private
         private string _rootFolderPath;
-        private FWDirectory _rootFswDirectory;
+        private FWDirectoryContainer _directoryContainer;
         private int _timerMS;
         private bool _recursive;
 
         private string _extension; //".txt";
-        private Action<string> _notifyAction;
+        private Action<IEnumerable<string>> _notifyAction;
 
         private FileSystemWatcher _fswFiles;
         private FileSystemWatcher _fswDirectories;
@@ -34,6 +33,7 @@ namespace TestFileSystemWatcher
         private List<string> _directoryChanges = new List<string>();
 
         static private object lockObj = new object();
+        
         #endregion Private
 
         #region Public
@@ -45,7 +45,7 @@ namespace TestFileSystemWatcher
         /// <param name="timerMS"></param>
         /// <param name="notifyAction"></param>
         /// <param name="recursive"></param>
-        public FileWatcher(string folder, string extension /* ".txt" */, int timerMS, Action<string> notifyAction, bool recursive = true)
+        public FileWatcher(string folder, string extension /* ".txt" */, int timerMS, Action<IEnumerable<string>> notifyAction, bool recursive = true)
         {
             _rootFolderPath = folder;
             _extension = extension;
@@ -53,8 +53,8 @@ namespace TestFileSystemWatcher
             _notifyAction = notifyAction;
             _recursive = recursive;
 
-            _rootFswDirectory = new FWDirectory(null, _rootFolderPath, extension, OnChanges);
-            _rootFswDirectory.Populate();
+            _directoryContainer = new FWDirectoryContainer(_rootFolderPath, extension);
+            _directoryContainer.Populate();
 
             _timer = new System.Timers.Timer(_timerMS);
             _timer.Elapsed += onTimedEvent;
@@ -139,27 +139,30 @@ namespace TestFileSystemWatcher
             }
         }
 
-        public void OnChanges(string fullPath) //callback for changes detected by the FWDirectory
+        public void OnChanges(IEnumerable<string> absolutePaths) //Callback for changes detected by the FWDirectory
         {
-            notifyAction(fullPath);
-        }
-
-        private void notifyAction(string fullPath)
-        {
-            string relativePath;
-            try
+            List<string> relativePaths = new List<string>();
+            foreach ( string absolutePath in absolutePaths)
             {
-                relativePath = PathExtension.GetRelativePath(_rootFolderPath, fullPath);
-                if (relativePath == null)
+                try
                 {
-                    return;
+                    string relativePath = PathHelper.GetRelativePath(_rootFolderPath, absolutePath);
+                    if (relativePath != null)
+                    {
+                        relativePaths.Add(relativePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logException(ex);
                 }
             }
-            catch (Exception)
-            {
-                throw;
-            }
-            _notifyAction(relativePath);
+            notifyAction(relativePaths);
+        }
+
+        private void notifyAction(IEnumerable<string> absolutePaths)
+        {
+            _notifyAction(absolutePaths);
         }
 
         #endregion Public
@@ -243,7 +246,7 @@ namespace TestFileSystemWatcher
                 try
                 {
                     DirectoryInfo diNewName = new DirectoryInfo(e.FullPath);
-                    IEnumerable<string> newFiles = diNewName.GetFiles("*" + _extension, SearchOption.AllDirectories).Select(fileinfo=>fileinfo.FullName);
+                    IEnumerable<string> newFiles = diNewName.GetFiles("*" + _extension, SearchOption.AllDirectories).Select(fileinfo => fileinfo.FullName);
                     foreach (string filePath in newFiles)
                     {
                         _fileChanges.AddIfNotPresent(filePath);
@@ -272,19 +275,21 @@ namespace TestFileSystemWatcher
             lock (lockObj)
             {
 
+                //Directories First
+                while (_directoryChanges.Count > 0)
+                {
+                    IEnumerable<string> changedRelativePaths = _directoryContainer.OnDirectoryChange(_directoryChanges[0]);
+                    _notifyAction(changedRelativePaths);
+                    _directoryChanges.RemoveAt(0);
+                }
+
                 while (_fileChanges.Count > 0)
                 {
-                    //_rootFswDirectory.OnFileChange(_fileChanges[0]);
-                    _notifyAction(_fileChanges[0]);
+                    IEnumerable<string> changedRelativePaths = _directoryContainer.OnFileChange(_fileChanges[0]);
+                    _notifyAction(changedRelativePaths);
                     _fileChanges.RemoveAt(0);
                 }
 
-                while (_directoryChanges.Count > 0)
-                {
-                    //_rootFswDirectory.OnDirectoryChange(_directoryChanges[0]);
-                    _notifyAction(_directoryChanges[0]);
-                    _directoryChanges.RemoveAt(0);
-                }
             }
 
             _timer.Start();

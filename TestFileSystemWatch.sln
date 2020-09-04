@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30320.27
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestFileSystemWatcher", "TestFileSystemWatch\TestFileSystemWatcher.csproj", "{20A6B9B5-C0A0-48E8-B985-69C0B840510D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MecalFileWatcher", "TestFileSystemWatch\MecalFileWatcher.csproj", "{20A6B9B5-C0A0-48E8-B985-69C0B840510D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.csproj", "{A1ED4558-C24D-48C8-8E74-8FC200C5C978}"
 EndProject

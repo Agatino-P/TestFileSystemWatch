@@ -104,9 +104,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TestFileSystemWatch\TestFileSystemWatcher.csproj">
-      <Project>{20a6b9b5-c0a0-48e8-b985-69c0b840510d}</Project>
-      <Name>TestFileSystemWatcher</Name>
+    <ProjectReference Include="..\TestFileSystemWatch\MecalFileWatcher.csproj">
+      <Project>{20A6B9B5-C0A0-48E8-B985-69C0B840510D}</Project>
+      <Name>MecalFileWatcher</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

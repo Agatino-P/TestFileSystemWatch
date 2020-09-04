@@ -4,10 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace TestFileSystemWatch
+namespace MecalFileWatcher
 {
-    static class PathExtension
+    static class PathHelper
     {
+
+        public static string GetDirectoryParentPath (string fullPath) => Path.GetFileName(Path.GetDirectoryName(fullPath));
+
         public static string GetRelativePath(string fromPath, string toPath) // (C:\a\a.txt, a.txt)
         {
             string rel=null;
