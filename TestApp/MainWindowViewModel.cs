@@ -58,12 +58,6 @@ namespace TestApp
             _fileWatcher.Start();
         }
 
-private void notifyChange(string fileId)
-        {
-            DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<string>(fileId, "FileSystemChange"));
-            //DispatcherHelper.CheckBeginInvokeOnUI(() => Changes.Add(fileId));
-            
-        }
 
         private RelayCommand _stopCmd;
         public RelayCommand StopCmd => _stopCmd ?? (_stopCmd = new RelayCommand(
@@ -75,6 +69,13 @@ private void notifyChange(string fileId)
         {
             _fileWatcher.Stop();
             _fileWatcher = null;
+        }
+
+private void notifyChange(string fileId)
+        {
+            DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<string>(fileId, "FileSystemChange"));
+            //DispatcherHelper.CheckBeginInvokeOnUI(() => Changes.Add(fileId));
+            
         }
 
 

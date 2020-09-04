@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Timers;
 using TestFileSystemWatch;
 
@@ -20,8 +21,9 @@ namespace TestFileSystemWatcher
         private string _rootFolderPath;
         private FWDirectory _rootFswDirectory;
         private int _timerMS;
+        private bool _recursive;
 
-        private string _extension;
+        private string _extension; //".txt";
         private Action<string> _notifyAction;
 
         private FileSystemWatcher _fswFiles;
@@ -35,14 +37,23 @@ namespace TestFileSystemWatcher
         #endregion Private
 
         #region Public
-        public FileWatcher(string folder, string extension, int timerMS, Action<string> notifyAction)
+        /// <summary>
+        /// Crea un nuovo watcher
+        /// </summary>
+        /// <param name="folder"></param>
+        /// <param name="extension">format: .txt</param>
+        /// <param name="timerMS"></param>
+        /// <param name="notifyAction"></param>
+        /// <param name="recursive"></param>
+        public FileWatcher(string folder, string extension /* ".txt" */, int timerMS, Action<string> notifyAction, bool recursive = true)
         {
             _rootFolderPath = folder;
             _extension = extension;
             _timerMS = timerMS;
             _notifyAction = notifyAction;
+            _recursive = recursive;
 
-            _rootFswDirectory = new FWDirectory(_rootFolderPath, extension, OnChanges);
+            _rootFswDirectory = new FWDirectory(null, _rootFolderPath, extension, OnChanges);
             _rootFswDirectory.Populate();
 
             _timer = new System.Timers.Timer(_timerMS);
@@ -59,10 +70,10 @@ namespace TestFileSystemWatcher
                 {
                     _fswFiles = new FileSystemWatcher(_rootFolderPath)
                     {
-                        IncludeSubdirectories = true,
-                        NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size ,
+                        IncludeSubdirectories = _recursive,
+                        NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
                         EnableRaisingEvents = true,
-                        Filter = "*"+_extension
+                        Filter = "*" + _extension
                     };
                     _fswFiles.Created += onOneFileEvent;
                     _fswFiles.Changed += onOneFileEvent;
@@ -75,7 +86,7 @@ namespace TestFileSystemWatcher
                 {
                     _fswDirectories = new FileSystemWatcher(_rootFolderPath)
                     {
-                        IncludeSubdirectories = true,
+                        IncludeSubdirectories = _recursive,
                         NotifyFilter = NotifyFilters.DirectoryName,
                         EnableRaisingEvents = true
                     };
@@ -86,7 +97,7 @@ namespace TestFileSystemWatcher
                     _fswDirectories.Error += onDirectoryErrorEvent;
                 }
 
-               
+
                 _timer.Enabled = true;
             }
             catch (Exception ex)
@@ -110,7 +121,7 @@ namespace TestFileSystemWatcher
                     _fswFiles.Dispose();
                     _fswFiles = null;
                 }
-                if (_fswDirectories!= null)
+                if (_fswDirectories != null)
                 {
                     _fswDirectories.EnableRaisingEvents = false;
                     _fswDirectories.Created -= onOneDirectoryEvent;
@@ -140,7 +151,9 @@ namespace TestFileSystemWatcher
             {
                 relativePath = PathExtension.GetRelativePath(_rootFolderPath, fullPath);
                 if (relativePath == null)
+                {
                     return;
+                }
             }
             catch (Exception)
             {
@@ -184,16 +197,9 @@ namespace TestFileSystemWatcher
                     return;
                 }
 
-                if (!_fileChanges.Contains(e.OldFullPath))
-                {
-                    _fileChanges.Add(e.OldFullPath);
-                }
-
-                if (!_fileChanges.Contains(e.FullPath))
-                {
-                    _fileChanges.Add(e.FullPath);
-                }
-                    _timer.Start();
+                _fileChanges.AddIfNotPresent(e.OldFullPath);
+                _fileChanges.AddIfNotPresent(e.FullPath);
+                _timer.Start();
             }
 
         }
@@ -231,15 +237,27 @@ namespace TestFileSystemWatcher
                     return;
                 }
 
-                if (!_directoryChanges.Contains(e.OldFullPath))
-                {
-                    _directoryChanges.Add(e.OldFullPath);
-                }
+                _directoryChanges.AddIfNotPresent(e.OldFullPath);
+                _directoryChanges.AddIfNotPresent(e.FullPath);
 
-                if (!_fileChanges.Contains(e.FullPath))
+                try
                 {
-                    _directoryChanges.Add(e.FullPath);
+                    DirectoryInfo diNewName = new DirectoryInfo(e.FullPath);
+                    IEnumerable<string> newFiles = diNewName.GetFiles("*" + _extension, SearchOption.AllDirectories).Select(fileinfo=>fileinfo.FullName);
+                    foreach (string filePath in newFiles)
+                    {
+                        _fileChanges.AddIfNotPresent(filePath);
+                    }
+
+                    IEnumerable<string> newSubDirs = diNewName.GetDirectories("*", SearchOption.AllDirectories).Select(fileinfo => fileinfo.FullName);
+                    foreach (string dirPath in newSubDirs)
+                    {
+                        _directoryChanges.AddIfNotPresent(dirPath);
+                    }
+
                 }
+                catch (Exception ex) { logException(ex); }
+
                 _timer.Start();
             }
 
@@ -256,20 +274,20 @@ namespace TestFileSystemWatcher
 
                 while (_fileChanges.Count > 0)
                 {
-                    _rootFswDirectory.OnFileChange(_fileChanges[0]);
+                    //_rootFswDirectory.OnFileChange(_fileChanges[0]);
+                    _notifyAction(_fileChanges[0]);
                     _fileChanges.RemoveAt(0);
-                    //_notifyAction(_fileChanges[0]);
                 }
 
                 while (_directoryChanges.Count > 0)
                 {
-                    _rootFswDirectory.OnDirectoryChange(_directoryChanges[0]);
+                    //_rootFswDirectory.OnDirectoryChange(_directoryChanges[0]);
+                    _notifyAction(_directoryChanges[0]);
                     _directoryChanges.RemoveAt(0);
-                    //_notifyAction(_directoryChanges[0]);
                 }
             }
 
-            this._timer.Start();
+            _timer.Start();
         }
 
         private void log(string text)

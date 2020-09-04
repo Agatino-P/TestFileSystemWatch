@@ -43,6 +43,7 @@
     <Compile Include="FWDirectory.cs" />
     <Compile Include="FileWatcher.cs" />
     <Compile Include="IFileWatcher.cs" />
+    <Compile Include="ListExtensions.cs" />
     <Compile Include="PathExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

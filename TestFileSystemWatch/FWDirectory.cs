@@ -11,6 +11,7 @@ namespace TestFileSystemWatcher
     {
         private class FWDirectory
         {
+            private FWDirectory _parentDir;
             private string _fullPath { get; set; }
             private string _extension { get; set; }
             private Action<string> _notifyAction { get; set; }
@@ -19,8 +20,9 @@ namespace TestFileSystemWatcher
             private Dictionary<string /*FullPath*/, FWDirectory> _subDirs = new Dictionary<string, FWDirectory>();
 
             #region PublicMethods
-            public FWDirectory(string fullPath, string extension, Action<string> notifyAction)
+            public FWDirectory(FWDirectory parentDir, string fullPath, string extension, Action<string> notifyAction)
             {
+                _parentDir = parentDir;
                 _fullPath = fullPath;
                 _notifyAction = notifyAction;
                 _extension = extension;
@@ -43,7 +45,7 @@ namespace TestFileSystemWatcher
 
                     foreach (DirectoryInfo subDir in dirInfo.GetDirectories())
                     {
-                        FWDirectory newSubDir = new FWDirectory(subDir.FullName, _extension, _notifyAction);
+                        FWDirectory newSubDir = new FWDirectory(this, subDir.FullName, _extension, _notifyAction);
                         _subDirs.Add(subDir.FullName, newSubDir);
                         newSubDir.Populate();
                     }
@@ -92,6 +94,24 @@ namespace TestFileSystemWatcher
             {
                 if (fullPath != this._fullPath)
                 {
+                    try
+                    {
+                        if (Directory.Exists(fullPath))
+                        {
+                            addSubDir(fullPath);
+                        }
+                        else
+                        {
+                            delSubDir(fullPath);
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+
+                        logException(ex);
+                    }
+                    if (true) ;
                     getSubDir(fullPath)?.OnDirectoryChange(fullPath);
                     return;
                 }
@@ -99,7 +119,7 @@ namespace TestFileSystemWatcher
                 if (!Directory.Exists(_fullPath))
                 {
                     FWDirectory parentDir = getParentDir(_fullPath);
-                    parentDir.delSubDir(_fullPath)
+                    parentDir.delSubDir(_fullPath);
                 }
 
                 List<string> oldFiles = new List<string>(GetAllFiles()); //saving this to avoid double notifications
