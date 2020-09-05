@@ -13,12 +13,18 @@ namespace MecalFileWatcher
         private readonly string _rootPath;
         private readonly string _extension;
         private bool _recursive;
-        //IEnumerable<string> getAllFilePaths();
+
+
         private Dictionary<string, FWDirectory> _fileEntries = new Dictionary<string, FWDirectory>(); //FilePath, ParentDir
+
         private List<FWDirectory> _dirs = new List<FWDirectory>();
+        private FWDirectory getDirByPath(string fullPath)
+        {
+            return _dirs.Where(fwd => fwd.FullPath == fullPath).FirstOrDefault();
+        }
 
         public IEnumerable<string> FilePaths => _fileEntries.Keys;
-        public IEnumerable<string> DirPaths => _dirs.Select(fwd=>fwd.FullPath);
+        public IEnumerable<string> DirPaths => _dirs.Select(fwd => fwd.FullPath);
 
 
         public FWDirectoryContainer(string rootPath, string extension, bool recursive)
@@ -50,29 +56,66 @@ namespace MecalFileWatcher
             {
                 _fileEntries.AddRange(_root.GetFileEntriesRecursive());
             }
-            
+
             if (!_recursive)
             {
                 foreach (string file in _root.GetFiles())
+                {
                     _fileEntries.Add(file, _root);
+                }
             }
         }
 
 
 
-/*
+
         internal IEnumerable<string> OnFileChange(string fullFilePath)
         {
+            List<string> changedFiles = new List<string>();
             try
             {
-                string dirPath = Path.GetDirectoryName(fullFilePath);
-                var subDir = _subDirs.ContainsKey(dirPath) ? _subDirs[dirPath] : addSubDir(dirPath);
-                if (subDir == null) //Should never happen
+                if (File.Exists(fullFilePath))
                 {
-                    log("file.watcher: Couldn't locate or create dir for file: {fullFilePath}");
-                    return Enumerable.Empty<string>();
+                    //If I know the file
+                    if (_fileEntries.ContainsKey(fullFilePath))
+                    {
+                        //just notify the change for file contents
+                        changedFiles.Add(fullFilePath);
+                    }
+                    else
+                    {
+                        string parentDirPath = Path.GetDirectoryName(fullFilePath);
+                        FWDirectory parentDir = getDirByPath(fullFilePath);
+
+                        //if I know the directory, 
+                        if (parentDir == null)
+                        {
+                            //I need to create the dir and all needed "gran-parent" dirs
+                            parentDir = addDir(parentDirPath);
+                        }
+
+                        //Now just add the file
+                        parentDir.AddFile(fullFilePath);
+                        _fileEntries.Add(fullFilePath, parentDir);
+                        changedFiles.Add(fullFilePath);
+                    }
                 }
-                return subDir.FileChange(fullFilePath);
+
+                if (!File.Exists(fullFilePath))
+                {
+                    if (_fileEntries.ContainsKey(fullFilePath))
+                    {
+                        FWDirectory parentDir = _fileEntries[fullFilePath];
+                        parentDir.RemoveFile(fullFilePath);
+                        _fileEntries.Remove(fullFilePath);
+                        changedFiles.Add(fullFilePath);
+                    }
+                    else
+                    {
+                        //nothing to do
+                    }
+                }
+                return changedFiles; ;
             }
             catch (Exception ex)
             {
@@ -80,17 +123,61 @@ namespace MecalFileWatcher
                 return Enumerable.Empty<string>();
             }
         }
+
         internal IEnumerable<string> OnDirectoryChange(string fullDirPath)
         {
-            return Enumerable.Empty<string>();
+            List<string> changedFiles = new List<string>();
+
+            if (Directory.Exists(fullDirPath))
+            {
+                FWDirectory fwd = getDirByPath(fullDirPath);
+                if (fwd == null)
+                {
+                    addDir(fullDirPath);
+                }
+                else
+                {
+                    //Nothing to do
+                }
+            }
+            else
+            {
+                FWDirectory fwd = getDirByPath(fullDirPath);
+                if (fwd == null)
+                {
+                    //Nothing to do
+                }
+                else
+                {
+                    //We need to 
+                    //- remove this folder and all subfolders
+                    //- update the dirs and fileEntries
+                    //- notify all changed fileEntries
+                    List<FWDirectory> impactedDirs = new List<FWDirectory> { fwd };
+                    impactedDirs.AddRange(fwd.GetSubDirs());
+
+                    foreach (FWDirectory impactedDir in impactedDirs)
+                    {
+                        IEnumerable<string> impactedDirFiles = impactedDir.GetFiles();
+                        changedFiles.AddRange(impactedDirFiles);
+                        foreach (string impactedDirFile in impactedDirFiles)
+                        {
+                            _fileEntries.Remove(impactedDirFile);
+                        }
+                        _dirs.Remove(impactedDir);
+                    }
+                }
+            }
+            return changedFiles;
         }
 
-
-        private FWDirectory addSubDir(string dirPath)
+        private FWDirectory addDir(string parentDirPath)
         {
+            //this must create the object after having created all the needed parent objects
+            //in the end return the newly created object
             throw new NotImplementedException();
         }
-*/
+
 
         #region Logging
         private void log(string text)

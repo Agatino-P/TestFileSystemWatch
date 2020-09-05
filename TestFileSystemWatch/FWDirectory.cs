@@ -84,7 +84,12 @@ namespace MecalFileWatcher
             return recursiveFiles;
         }
 
-        public IEnumerable<FWDirectory> GetSubDirs => _subDirs;
+        public IEnumerable<FWDirectory> GetSubDirs() => _subDirs;
+
+        internal void AddFile(string fullFilePath)
+        {
+            throw new NotImplementedException();
+        }
 
         #endregion PublicMethods
 
@@ -115,58 +120,65 @@ namespace MecalFileWatcher
             return Enumerable.Empty<string>();
         }
 
-/*
- * public void DirectoryChange(string fullPath)
+        internal void RemoveFile(string fullFilePath)
         {
-            if (fullPath != this.FullPath)
-            {
-                try
-                {
-                    if (Directory.Exists(fullPath))
-                    {
-                        addSubDir(fullPath);
-                    }
-                    else
-                    {
-                        delSubDir(fullPath);
-                    }
-
-                }
-                catch (Exception ex)
-                {
-
-                    logException(ex);
-                }
-                if (true)
-                {
-                    ;
-                }
-                return;
-            }
-
-            if (!Directory.Exists(_fullPath))
-            {
-                //FWDirectory parentDir = getParentDir(_fullPath);
-                //parentDir.delSubDir(_fullPath);
-            }
+            throw new NotImplementedException();
         }
 
-        */
-        public IEnumerable<string> ClearAll()
+        /*
+         * public void DirectoryChange(string fullPath)
+                {
+                    if (fullPath != this.FullPath)
+                    {
+                        try
+                        {
+                            if (Directory.Exists(fullPath))
+                            {
+                                addSubDir(fullPath);
+                            }
+                            else
+                            {
+                                delSubDir(fullPath);
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+
+                            logException(ex);
+                        }
+                        if (true)
+                        {
+                            ;
+                        }
+                        return;
+                    }
+
+                    if (!Directory.Exists(_fullPath))
+                    {
+                        //FWDirectory parentDir = getParentDir(_fullPath);
+                        //parentDir.delSubDir(_fullPath);
+                    }
+                }
+
+                */
+        public IEnumerable<string> ClearRecursive()
         {
             List<string> changedFiles = new List<string>(_files);
             _files.Clear();
 
             foreach (FWDirectory subdir in _subDirs)
             {
-                changedFiles.AddRange(subdir.ClearAll());
+                changedFiles.AddRange(subdir.ClearRecursive());
             }
             _subDirs.Clear();
             return changedFiles;
         }
+
+
         #endregion Changes
 
-        
+
         #region Private
 
         #region SubDirMethods
