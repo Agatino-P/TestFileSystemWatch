@@ -17,7 +17,7 @@ namespace MecalFileWatcher
         //Notify when any file is changed/added/deleted (including multiple notification on directory change/add/delete)
 
         #region Private
-        private string _rootFolderPath;
+        public readonly string RootFolderPath;
         private FWDirectoryContainer _directoryContainer;
         private int _timerMS;
         private bool _recursive;
@@ -45,16 +45,17 @@ namespace MecalFileWatcher
         /// <param name="timerMS"></param>
         /// <param name="notifyAction"></param>
         /// <param name="recursive"></param>
+
         public FileWatcher(string folder, string extension /* ".txt" */, int timerMS, Action<IEnumerable<string>> notifyAction, bool recursive = true)
         {
-            _rootFolderPath = folder;
+            RootFolderPath = folder;
             _extension = extension;
             _timerMS = timerMS;
             _notifyAction = notifyAction;
             _recursive = recursive;
 
-            _directoryContainer = new FWDirectoryContainer(_rootFolderPath, extension);
-            _directoryContainer.Populate();
+            _directoryContainer = new FWDirectoryContainer(RootFolderPath, _extension, _recursive);
+            //_directoryContainer.Populate();
 
             _timer = new System.Timers.Timer(_timerMS);
             _timer.Elapsed += onTimedEvent;
@@ -68,7 +69,7 @@ namespace MecalFileWatcher
             {
                 if (_fswFiles == null)
                 {
-                    _fswFiles = new FileSystemWatcher(_rootFolderPath)
+                    _fswFiles = new FileSystemWatcher(RootFolderPath)
                     {
                         IncludeSubdirectories = _recursive,
                         NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
@@ -84,7 +85,7 @@ namespace MecalFileWatcher
 
                 if (_fswDirectories == null)
                 {
-                    _fswDirectories = new FileSystemWatcher(_rootFolderPath)
+                    _fswDirectories = new FileSystemWatcher(RootFolderPath)
                     {
                         IncludeSubdirectories = _recursive,
                         NotifyFilter = NotifyFilters.DirectoryName,
@@ -146,7 +147,7 @@ namespace MecalFileWatcher
             {
                 try
                 {
-                    string relativePath = PathHelper.GetRelativePath(_rootFolderPath, absolutePath);
+                    string relativePath = PathHelper.GetRelativePath(RootFolderPath, absolutePath);
                     if (relativePath != null)
                     {
                         relativePaths.Add(relativePath);
@@ -275,20 +276,20 @@ namespace MecalFileWatcher
             lock (lockObj)
             {
 
-                //Directories First
-                while (_directoryChanges.Count > 0)
-                {
-                    IEnumerable<string> changedRelativePaths = _directoryContainer.OnDirectoryChange(_directoryChanges[0]);
-                    _notifyAction(changedRelativePaths);
-                    _directoryChanges.RemoveAt(0);
-                }
+                ////Directories First
+                //while (_directoryChanges.Count > 0)
+                //{
+                //    IEnumerable<string> changedRelativePaths = _directoryContainer.OnDirectoryChange(_directoryChanges[0]);
+                //    _notifyAction(changedRelativePaths);
+                //    _directoryChanges.RemoveAt(0);
+                //}
 
-                while (_fileChanges.Count > 0)
-                {
-                    IEnumerable<string> changedRelativePaths = _directoryContainer.OnFileChange(_fileChanges[0]);
-                    _notifyAction(changedRelativePaths);
-                    _fileChanges.RemoveAt(0);
-                }
+                //while (_fileChanges.Count > 0)
+                //{
+                //    IEnumerable<string> changedRelativePaths = _directoryContainer.OnFileChange(_fileChanges[0]);
+                //    _notifyAction(changedRelativePaths);
+                //    _fileChanges.RemoveAt(0);
+                //}
 
             }
 
@@ -303,6 +304,18 @@ namespace MecalFileWatcher
         private void logException(Exception ex)
         {
             Debug.Print(ex.Message);
+        }
+
+        public void NotifyAllDirs()
+        {
+            IEnumerable<string> dp = _directoryContainer.DirPaths;
+            _notifyAction(_directoryContainer.DirPaths);
+        }
+
+        public void NotifyAllFiles()
+        {
+            IEnumerable<string> fp = _directoryContainer.FilePaths;
+            _notifyAction(_directoryContainer.FilePaths);
         }
     }
 }

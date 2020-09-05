@@ -13,19 +13,19 @@ namespace TestApp
 {
     public class MainWindowViewModel : ViewModelBase
     {
-        IFileWatcher _fileWatcher;
+        private IFileWatcher _fileWatcher;
 
         private string _folder = @"D:\0_temp";
-        public string Folder { get => _folder; set { Set(() => Folder, ref _folder, value); } }
+        public string Folder { get => _folder; set => Set(() => Folder, ref _folder, value); }
         private string _extension = @".txt";
-        public string Extension { get => _extension; set { Set(() => Extension, ref _extension, value); } }
+        public string Extension { get => _extension; set => Set(() => Extension, ref _extension, value); }
 
         private int _timerMS = 1000;
-        public int TimerMS { get => _timerMS; set { Set(() => TimerMS, ref _timerMS, value); } }
+        public int TimerMS { get => _timerMS; set => Set(() => TimerMS, ref _timerMS, value); }
 
 
         private ObservableCollection<string> _changes = new ObservableCollection<string>();
-        public ObservableCollection<string> Changes { get => _changes; set { Set(() => Changes, ref _changes, value); } }
+        public ObservableCollection<string> Changes { get => _changes; set => Set(() => Changes, ref _changes, value); }
 
         private RelayCommand _clearCmd;
         public RelayCommand ClearCmd => _clearCmd ?? (_clearCmd = new RelayCommand(
@@ -68,6 +68,22 @@ namespace TestApp
             _fileWatcher = null;
         }
 
+
+        private RelayCommand _dumpCmd;
+        public RelayCommand DumpCmd => _dumpCmd ?? (_dumpCmd = new RelayCommand(
+            () => dump(),
+            () => { return 1 == 1; },
+            keepTargetAlive: true
+            ));
+        private void dump()
+        {
+            clear();
+            Changes.Add("Dirs");
+            _fileWatcher.NotifyAllDirs();
+            Changes.Add("Files");
+            _fileWatcher.NotifyAllFiles();
+        }
+
         private void notifyChanges(IEnumerable<string> fileIds)
         {
             DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<IEnumerable<string>>(fileIds, "FileSystemChange"));
@@ -79,12 +95,15 @@ namespace TestApp
         public MainWindowViewModel()
         {
             DispatcherHelper.Initialize();
-            Messenger.Default.Register<string>(this, "FileSystemChange", onFileSystemChange);
+            Messenger.Default.Register<IEnumerable<string>>(this, "FileSystemChange", onFileSystemChange );
         }
 
-        private void onFileSystemChange(string path)
+        private void onFileSystemChange(IEnumerable<string> paths)
         {
-            Changes.Add($"{DateTime.Now.ToString()}: {path}");
+            foreach (string path in paths)
+            {
+                Changes.Add($"{DateTime.Now.ToString()}: {path}");
+            }
         }
     }
 }

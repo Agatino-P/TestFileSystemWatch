@@ -9,5 +9,7 @@ namespace MecalFileWatcher
     {
         void Start();
         void Stop();
+        void NotifyAllDirs();
+        void NotifyAllFiles();
     }
 }

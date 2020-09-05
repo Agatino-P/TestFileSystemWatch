@@ -3,65 +3,89 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 
 namespace MecalFileWatcher
 {
 
     internal class FWDirectory
     {
-        private string _fullPath { get; set; }
-        private string _extension { get; set; }
-        
-        private FWDirectory _parentDir;
+        public readonly string FullPath;
+        public readonly string Extension;
+        public readonly FWDirectory ParentDir;
+
         private List<string> _files = new List<string>();
         private List<FWDirectory> _subDirs = new List<FWDirectory>();
 
         #region PublicMethods
         public FWDirectory(FWDirectory parentDir, string fullPath, string extension)
         {
-            _parentDir = parentDir;
-            _fullPath = fullPath;
-            _extension = extension;
-        }
+            ParentDir = parentDir;
+            FullPath = fullPath;
+            Extension = extension;
 
-        public void Populate() //this doesn't notify
-        {
             try
             {
-                if (!Directory.Exists(_fullPath))
-                {
-                    return;
-                }
+                DirectoryInfo directoryInfo = new DirectoryInfo(fullPath);
+                List<FileInfo> files = directoryInfo.GetFiles("*" + extension).ToList();
+                _files = new  List<string>(files.Select(fi=>fi.FullName));
 
-                DirectoryInfo dirInfo = new DirectoryInfo(_fullPath);
-                foreach (string file in dirInfo.GetFiles().Select(f => f.FullName))
-                {
-                    _SubDirFiles.Add(file);
-                }
-
-                foreach (DirectoryInfo subDir in dirInfo.GetDirectories())
-                {
-                    FWDirectory newSubDir = new FWDirectory(this, subDir.FullName, _extension);
-                    _subDirs.Add(subDir.FullName, newSubDir);
-                    newSubDir.Populate();
-                }
             }
             catch (Exception ex)
             {
                 logException(ex);
             }
-
         }
 
-        public IEnumerable<string> GetAllFiles()
+
+        internal IEnumerable<FWDirectory> PopulateDirsRecursive()
         {
-            List<string> allfiles = new List<string>(_SubDirFiles);
-            foreach (FWDirectory subDir in _subDirs.Values)
+            try
             {
-                allfiles.AddRange(subDir.GetAllFiles());
+                if (!Directory.Exists(FullPath))
+                {
+                    return Enumerable.Empty<FWDirectory>();
+                }
+
+                _subDirs.Clear();
+
+                DirectoryInfo dirInfo = new DirectoryInfo(FullPath);
+
+                List<FWDirectory> subDirsRecursive = new List<FWDirectory>(_subDirs);
+
+                foreach (DirectoryInfo subDir in dirInfo.GetDirectories())
+                {
+                    FWDirectory newSubDir = new FWDirectory(this, subDir.FullName, Extension);
+                    _subDirs.Add(newSubDir);
+                    subDirsRecursive.Add(newSubDir);
+                    subDirsRecursive.AddRange(newSubDir.PopulateDirsRecursive());
+                }
+                return subDirsRecursive;
             }
-            return allfiles;
+            catch (Exception ex)
+            {
+                logException(ex);
+                return Enumerable.Empty<FWDirectory>();
+            }
         }
+
+
+        public IEnumerable<string> GetFiles() => _files;
+        
+        public Dictionary<string, FWDirectory> GetFileEntriesRecursive()
+        {
+            Dictionary<string, FWDirectory> recursiveFiles = new Dictionary<string, FWDirectory>();
+            foreach (string file in _files)
+                recursiveFiles.Add(file, this);
+            foreach(FWDirectory subDir in _subDirs)
+            {
+                recursiveFiles.AddRange(subDir.GetFileEntriesRecursive());
+            }
+            return recursiveFiles;
+        }
+
+        public IEnumerable<FWDirectory> GetSubDirs => _subDirs;
+
         #endregion PublicMethods
 
         #region Changes
@@ -91,9 +115,10 @@ namespace MecalFileWatcher
             return Enumerable.Empty<string>();
         }
 
-        public void DirectoryChange(string fullPath)
+/*
+ * public void DirectoryChange(string fullPath)
         {
-            if (fullPath != this._fullPath)
+            if (fullPath != this.FullPath)
             {
                 try
                 {
@@ -116,8 +141,6 @@ namespace MecalFileWatcher
                 {
                     ;
                 }
-
-                getSubDir(fullPath)?.DirectoryChange(fullPath);
                 return;
             }
 
@@ -126,19 +149,10 @@ namespace MecalFileWatcher
                 //FWDirectory parentDir = getParentDir(_fullPath);
                 //parentDir.delSubDir(_fullPath);
             }
-
-            List<string> oldFiles = new List<string>(GetAllFiles()); //saving this to avoid double notifications
-            clearAll();
-            Populate();
-            List<string> newFiles = GetAllFiles().ToList();
-            List<string> mergedList = oldFiles.Union(newFiles).ToList();
-            foreach (string file in mergedList)
-            {
-                notifyFileChange(file);
-            }
         }
 
-        public IEnumerable<string> ClearAll() 
+        */
+        public IEnumerable<string> ClearAll()
         {
             List<string> changedFiles = new List<string>(_files);
             _files.Clear();
@@ -152,61 +166,46 @@ namespace MecalFileWatcher
         }
         #endregion Changes
 
+        
         #region Private
-
-
 
         #region SubDirMethods
 
-        private void addSubDir(string fullPath)
+        private FWDirectory getSubDirByPath(string fullPath)
         {
-            if (_subDirs.ContainsKey(fullPath))
-            {
-                _subDirs[fullPath].Populate();
-            }
+            return _subDirs.Where(sd => sd.FullPath == fullPath).FirstOrDefault();
         }
+
+        private FWDirectory addSubDir(string fullPath)
+        {
+            FWDirectory fWDirectory = getSubDirByPath(fullPath);
+            return fWDirectory ?? new FWDirectory(this, fullPath, Extension);
+        }
+
         private void delSubDir(string fullPath)
         {
-            FWDirectory targetDir = getSubDir(fullPath);
+            FWDirectory targetDir = getSubDirByPath(fullPath);
             if (targetDir == null)
             {
                 return;
             }
             targetDir.clear();
+            _subDirs.Remove(targetDir);
         }
         #endregion SubDirMethods
 
         #region Utility
-        private FWDirectory getSubDir(string fullPath)
+        private IEnumerable<string> clear()
         {
-            if (_subDirs.ContainsKey(fullPath))
-            {
-                return _subDirs[fullPath];
-            }
+            List<string> changedFiles = new List<string>(_files);
+            _files.Clear();
 
-            return null;
+            foreach (FWDirectory subDir in _subDirs)
+            {
+                changedFiles.AddRange(subDir.clear());
+            }
+            return changedFiles;
         }
-
-        //private FWDirectory getParentDir(string fullPath)
-        //{
-        //    //string parentPath = PathHelper.GetDirectoryParenthPath(fullPath);
-        //    return getSubDir(parentPath);
-        //}
-
-
-        private void clear()
-        {
-            foreach (FWDirectory subDir in _subDirs.Values)
-            {
-                subDir.clear();
-            }
-            foreach (string file in _SubDirFiles)
-            {
-                updateRemovedfile(file);
-            }
-        }
-
-
         #endregion Utility
 
         #endregion Private
