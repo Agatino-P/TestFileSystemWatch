@@ -77,10 +77,9 @@ namespace TestApp
             ));
         private void dump()
         {
-            clear();
-            Changes.Add("Dirs");
+
             _fileWatcher.NotifyAllDirs();
-            Changes.Add("Files");
+
             _fileWatcher.NotifyAllFiles();
         }
 

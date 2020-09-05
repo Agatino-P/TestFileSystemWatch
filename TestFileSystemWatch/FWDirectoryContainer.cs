@@ -66,15 +66,13 @@ namespace MecalFileWatcher
             }
         }
 
-
-
-
         internal IEnumerable<string> OnFileChange(string fullFilePath)
         {
             List<string> changedFiles = new List<string>();
             try
             {
-                if (File.Exists(fullFilePath))
+                bool fileExists = File.Exists(fullFilePath);
+                if (fileExists)
                 {
                     //If I know the file
                     if (_fileEntries.ContainsKey(fullFilePath))
@@ -85,7 +83,7 @@ namespace MecalFileWatcher
                     else
                     {
                         string parentDirPath = Path.GetDirectoryName(fullFilePath);
-                        FWDirectory parentDir = getDirByPath(fullFilePath);
+                        FWDirectory parentDir = getDirByPath(parentDirPath);
 
                         //if I know the directory, 
                         if (parentDir == null)
@@ -101,7 +99,7 @@ namespace MecalFileWatcher
                     }
                 }
 
-                if (!File.Exists(fullFilePath))
+                if (!fileExists)
                 {
                     if (_fileEntries.ContainsKey(fullFilePath))
                     {
@@ -171,11 +169,28 @@ namespace MecalFileWatcher
             return changedFiles;
         }
 
-        private FWDirectory addDir(string parentDirPath)
+        private FWDirectory addDir(string newDirPath)
         {
             //this must create the object after having created all the needed parent objects
             //in the end return the newly created object
-            throw new NotImplementedException();
+            try
+            {
+                string parentDirPath = Path.GetDirectoryName(newDirPath);
+                FWDirectory newParentDir = getDirByPath(parentDirPath);
+
+                if (newParentDir == null)
+                {
+                    newParentDir = addDir(parentDirPath);
+                }
+                FWDirectory newDir = new FWDirectory(newParentDir, newDirPath, _extension);
+                _dirs.Add(newDir);
+                return newDir;
+            }
+            catch (Exception ex)
+            {
+                logException(ex);
+                return null;
+            }
         }
 
 

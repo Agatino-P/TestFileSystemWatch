@@ -88,7 +88,7 @@ namespace MecalFileWatcher
 
         internal void AddFile(string fullFilePath)
         {
-            throw new NotImplementedException();
+            _files.AddIfNotPresent(fullFilePath);
         }
 
         #endregion PublicMethods
@@ -122,7 +122,7 @@ namespace MecalFileWatcher
 
         internal void RemoveFile(string fullFilePath)
         {
-            throw new NotImplementedException();
+            _files.RemoveIfPresent(fullFilePath);
         }
 
         /*

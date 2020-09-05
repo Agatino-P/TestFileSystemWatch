@@ -33,7 +33,7 @@ namespace MecalFileWatcher
         private List<string> _directoryChanges = new List<string>();
 
         static private object lockObj = new object();
-        
+
         #endregion Private
 
         #region Public
@@ -143,7 +143,7 @@ namespace MecalFileWatcher
         public void OnChanges(IEnumerable<string> absolutePaths) //Callback for changes detected by the FWDirectory
         {
             List<string> relativePaths = new List<string>();
-            foreach ( string absolutePath in absolutePaths)
+            foreach (string absolutePath in absolutePaths)
             {
                 try
                 {
@@ -276,20 +276,20 @@ namespace MecalFileWatcher
             lock (lockObj)
             {
 
-                ////Directories First
-                //while (_directoryChanges.Count > 0)
-                //{
-                //    IEnumerable<string> changedRelativePaths = _directoryContainer.OnDirectoryChange(_directoryChanges[0]);
-                //    _notifyAction(changedRelativePaths);
-                //    _directoryChanges.RemoveAt(0);
-                //}
+                //Directories First
+                while (_directoryChanges.Count > 0)
+                {
+                    IEnumerable<string> changedRelativePaths = _directoryContainer.OnDirectoryChange(_directoryChanges[0]);
+                    _notifyAction(changedRelativePaths);
+                    _directoryChanges.RemoveAt(0);
+                }
 
-                //while (_fileChanges.Count > 0)
-                //{
-                //    IEnumerable<string> changedRelativePaths = _directoryContainer.OnFileChange(_fileChanges[0]);
-                //    _notifyAction(changedRelativePaths);
-                //    _fileChanges.RemoveAt(0);
-                //}
+                while (_fileChanges.Count > 0)
+                {
+                    IEnumerable<string> changedRelativePaths = _directoryContainer.OnFileChange(_fileChanges[0]);
+                    _notifyAction(changedRelativePaths);
+                    _fileChanges.RemoveAt(0);
+                }
 
             }
 
@@ -308,14 +308,16 @@ namespace MecalFileWatcher
 
         public void NotifyAllDirs()
         {
-            IEnumerable<string> dp = _directoryContainer.DirPaths;
-            _notifyAction(_directoryContainer.DirPaths);
+            List<string> dp = new List<string>(_directoryContainer.DirPaths);
+            dp.Insert(0, $"Dirs: { dp.Count}");
+            _notifyAction(dp);
         }
 
         public void NotifyAllFiles()
         {
-            IEnumerable<string> fp = _directoryContainer.FilePaths;
-            _notifyAction(_directoryContainer.FilePaths);
+            List<string> fp = new List<string>(_directoryContainer.FilePaths);
+            fp.Insert(0, $"Files: {fp.Count}");
+            _notifyAction(fp);
         }
     }
 }
