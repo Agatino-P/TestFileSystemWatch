@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MecalFileWatcher", "TestFil
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.csproj", "{A1ED4558-C24D-48C8-8E74-8FC200C5C978}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MecalFileWatcher.Test", "MecalFileWatcher.Test\MecalFileWatcher.Test.csproj", "{3E1AC1AF-EB4D-4BFC-875A-FEDBF1444019}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{A1ED4558-C24D-48C8-8E74-8FC200C5C978}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1ED4558-C24D-48C8-8E74-8FC200C5C978}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1ED4558-C24D-48C8-8E74-8FC200C5C978}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E1AC1AF-EB4D-4BFC-875A-FEDBF1444019}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E1AC1AF-EB4D-4BFC-875A-FEDBF1444019}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E1AC1AF-EB4D-4BFC-875A-FEDBF1444019}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E1AC1AF-EB4D-4BFC-875A-FEDBF1444019}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

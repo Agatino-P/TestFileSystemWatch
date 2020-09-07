@@ -11,7 +11,7 @@ using System.Collections.ObjectModel;
 
 namespace TestApp
 {
-    public class MainWindowViewModel : ViewModelBase
+    public class MainWindowViewModel : ViewModelBase, INotifiable
     {
         private IFileWatcher _fileWatcher;
 
@@ -50,7 +50,7 @@ namespace TestApp
         private void start()
         {
             _fileWatcher = new FileWatcher(_folder, _extension, _timerMS,
-               (s) => notifyChanges(s)
+               (s) => NotifyChanges(s)
                );
             _fileWatcher.Start();
         }
@@ -83,7 +83,7 @@ namespace TestApp
             _fileWatcher.NotifyAllFiles();
         }
 
-        private void notifyChanges(IEnumerable<string> fileIds)
+        public virtual void NotifyChanges(IEnumerable<string> fileIds)
         {
             DispatcherHelper.CheckBeginInvokeOnUI(() => Messenger.Default.Send<IEnumerable<string>>(fileIds, "FileSystemChange"));
             //DispatcherHelper.CheckBeginInvokeOnUI(() => Changes.Add(fileId));
