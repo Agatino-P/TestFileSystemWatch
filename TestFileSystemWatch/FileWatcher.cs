@@ -14,29 +14,8 @@ namespace MecalFileWatcher
         //Update itself on FileSystemWatch events
         //Notify when any file is changed/added/deleted (including multiple notification on directory change/add/delete)
 
-        #region Private
-
-        public readonly string RootFolderPath;
-        private FWDirectoryContainer _directoryContainer;
-        private int _timerMS;
-        private bool _recursive;
-
-        private string _extension; //".txt";
-        private Action<IEnumerable<string>> _notifyAction;
-
-        private FileSystemWatcher _fswFiles;
-        private FileSystemWatcher _fswDirectories;
-
-        private System.Timers.Timer _timer;
-        private List<string> _fileChanges = new List<string>();
-        private List<string> _directoryChanges = new List<string>();
-
-        static private object lockObj = new object();
-
-        #endregion Private
-
         #region Public
-      
+
         public FileWatcher(string folder, string extension /* ".txt" */, int timerMS, Action<IEnumerable<string>> notifyAction, bool recursive = true)
         {
             RootFolderPath = folder;
@@ -130,7 +109,21 @@ namespace MecalFileWatcher
             }
         }
 
-        public void OnChanges(IEnumerable<string> absolutePaths) //Callback for changes detected by the FWDirectory
+        public void NotifyAllDirs()
+        {
+            List<string> dp = new List<string>(_directoryContainer.DirPaths);
+            dp.Insert(0, $"Dirs: { dp.Count}");
+            _notifyAction(dp);
+        }
+
+        public void NotifyAllFiles()
+        {
+            List<string> fp = new List<string>(_directoryContainer.FilePaths);
+            fp.Insert(0, $"Files: {fp.Count}");
+            _notifyAction(fp);
+        }
+
+        internal void OnChanges(IEnumerable<string> absolutePaths) //Callback for changes detected by the FWDirectory
         {
             List<string> relativePaths = new List<string>();
             foreach (string absolutePath in absolutePaths)
@@ -151,15 +144,33 @@ namespace MecalFileWatcher
             notifyAction(relativePaths);
         }
 
-        private void notifyAction(IEnumerable<string> absolutePaths)
+        private void notifyAction(IEnumerable<string> relativePaths)
         {
-            _notifyAction(absolutePaths);
+            _notifyAction(relativePaths);
         }
 
         #endregion Public
 
-        #region FileWatcherEvents
+        #region Private
+        public readonly string RootFolderPath;
+        private FWDirectoryContainer _directoryContainer;
+        private int _timerMS;
+        private bool _recursive;
 
+        private string _extension; //".txt";
+        private Action<IEnumerable<string>> _notifyAction;
+
+        private FileSystemWatcher _fswFiles;
+        private FileSystemWatcher _fswDirectories;
+
+        private System.Timers.Timer _timer;
+        private List<string> _fileChanges = new List<string>();
+        private List<string> _directoryChanges = new List<string>();
+
+        static private object lockObj = new object();
+        #endregion Private
+
+        #region FileWatcherEvents
         private void onFileErrorEvent(object sender, ErrorEventArgs e)
         {
             log("Error on FileSystemWatcher");
@@ -258,6 +269,7 @@ namespace MecalFileWatcher
         }
         #endregion DirectoryWatcherEvents
 
+        #region TimedEvents
         private void onTimedEvent(object sender, ElapsedEventArgs e)
         {
 
@@ -285,7 +297,9 @@ namespace MecalFileWatcher
 
             _timer.Start();
         }
+        #endregion TimedEvents
 
+        #region Logging
         private void log(string text)
         {
             Debug.Print(text);
@@ -295,19 +309,6 @@ namespace MecalFileWatcher
         {
             Debug.Print(ex.Message);
         }
-
-        public void NotifyAllDirs()
-        {
-            List<string> dp = new List<string>(_directoryContainer.DirPaths);
-            dp.Insert(0, $"Dirs: { dp.Count}");
-            _notifyAction(dp);
-        }
-
-        public void NotifyAllFiles()
-        {
-            List<string> fp = new List<string>(_directoryContainer.FilePaths);
-            fp.Insert(0, $"Files: {fp.Count}");
-            _notifyAction(fp);
-        }
+        #endregion Logging
     }
 }
