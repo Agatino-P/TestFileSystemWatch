@@ -8,21 +8,7 @@ namespace MecalFileWatcher
 {
     public class FWDirectoryContainer
     {
-        private FWDirectory _root;
-
-        private readonly string _rootPath;
-        private readonly string _extension;
-        private bool _recursive;
-
-
-        private Dictionary<string, FWDirectory> _fileEntries = new Dictionary<string, FWDirectory>(); //FilePath, ParentDir
-
-        private List<FWDirectory> _dirs = new List<FWDirectory>();
-        private FWDirectory getDirByPath(string fullPath)
-        {
-            return _dirs.Where(fwd => fwd.FullPath == fullPath).FirstOrDefault();
-        }
-
+        #region Public
         public IEnumerable<string> FilePaths => _fileEntries.Keys;
         public IEnumerable<string> DirPaths => _dirs.Select(fwd => fwd.FullPath);
 
@@ -35,15 +21,32 @@ namespace MecalFileWatcher
 
             Populate();
         }
+#endregion Public
+
+        private FWDirectory _root;
+
+        private readonly string _rootPath;
+        private readonly string _extension;
+        private bool _recursive;
+
+        private Dictionary<string, FWDirectory> _fileEntries = new Dictionary<string, FWDirectory>(); //FilePath, ParentDir
+
+        private List<FWDirectory> _dirs = new List<FWDirectory>();
+        private FWDirectory getDirByPath(string fullPath)
+        {
+            return _dirs.Where(fwd => fwd.FullPath == fullPath).FirstOrDefault();
+        }
 
         internal void Populate()
         {
             //grab root dir
+
             _dirs.Clear();
             _root = new FWDirectory(null, _rootPath, _extension);
             _dirs.Add(_root);
 
             //grab subdirs            
+
             if (_recursive)
             {
                 IEnumerable<FWDirectory> foundDirs = _root.PopulateDirsRecursive();
@@ -51,18 +54,15 @@ namespace MecalFileWatcher
             }
 
             //grab files from all dirs
+
             _fileEntries.Clear();
             if (_recursive)
             {
                 _fileEntries.AddRange(_root.GetFileEntriesRecursive());
             }
-
             if (!_recursive)
             {
-                foreach (string file in _root.GetFiles())
-                {
-                    _fileEntries.Add(file, _root);
-                }
+                _fileEntries.AddRange(_root.GetFileEntries());
             }
         }
 
@@ -126,7 +126,8 @@ namespace MecalFileWatcher
         {
             List<string> changedFiles = new List<string>();
 
-            if (Directory.Exists(fullDirPath))
+            bool directoryExists = Directory.Exists(fullDirPath);
+            if (directoryExists)
             {
                 FWDirectory fwd = getDirByPath(fullDirPath);
                 if (fwd == null)
@@ -138,7 +139,7 @@ namespace MecalFileWatcher
                     //Nothing to do
                 }
             }
-            else
+            if (!directoryExists)
             {
                 FWDirectory fwd = getDirByPath(fullDirPath);
                 if (fwd == null)
@@ -147,28 +148,13 @@ namespace MecalFileWatcher
                 }
                 else
                 {
-                    //We need to 
-                    //- remove this folder and all subfolders
-                    //- update the dirs and fileEntries
-                    //- notify all changed fileEntries
-                    List<FWDirectory> impactedDirs = new List<FWDirectory> { fwd };
-                    impactedDirs.AddRange(fwd.GetSubDirs());
-
-                    foreach (FWDirectory impactedDir in impactedDirs)
-                    {
-                        IEnumerable<string> impactedDirFiles = impactedDir.GetFiles();
-                        changedFiles.AddRange(impactedDirFiles);
-                        foreach (string impactedDirFile in impactedDirFiles)
-                        {
-                            _fileEntries.Remove(impactedDirFile);
-                        }
-                        _dirs.Remove(impactedDir);
-                    }
+                    changedFiles.AddRange(delDir(fwd));
                 }
             }
             return changedFiles;
         }
 
+        #region Private
         private FWDirectory addDir(string newDirPath)
         {
             //this must create the object after having created all the needed parent objects
@@ -193,6 +179,35 @@ namespace MecalFileWatcher
             }
         }
 
+        private IEnumerable<string> delDir(FWDirectory subDir)
+        {
+            //We need to 
+            //- scan this folder and all subfolders
+            //- update the dirs and fileEntries
+            //- update ParentDir
+            //- notify all changed fileEntries
+
+            List<string> impactedFiles = new List<string>();
+
+            List<FWDirectory> impactedDirs = new List<FWDirectory> { subDir };
+            impactedDirs.AddRange(subDir.GetSubDirs());
+
+            foreach (FWDirectory impactedDir in impactedDirs)
+            {
+                IEnumerable<string> impactedDirFiles = impactedDir.GetFiles();
+                impactedFiles.AddRange(impactedDirFiles);
+                _dirs.Remove(impactedDir);
+            }
+
+            foreach (string impactedFile in impactedFiles)
+            {
+                _fileEntries.Remove(impactedFile);
+            }
+            
+            subDir.ParentDir.RemoveDir(subDir);
+            return impactedFiles;
+        }
+        #endregion Private
 
         #region Logging
         private void log(string text)
