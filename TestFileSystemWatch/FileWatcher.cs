@@ -7,16 +7,15 @@ using System.Timers;
 
 namespace MecalFileWatcher
 {
-    public partial class FileWatcher : IFileWatcher
+    public class FileWatcher : IFileWatcher
     {
-
-
         //Works on absolute Paths
         //Needs to keep a structure of all Folders and file names to be able to:
         //Update itself on FileSystemWatch events
         //Notify when any file is changed/added/deleted (including multiple notification on directory change/add/delete)
 
         #region Private
+
         public readonly string RootFolderPath;
         private FWDirectoryContainer _directoryContainer;
         private int _timerMS;
@@ -37,15 +36,7 @@ namespace MecalFileWatcher
         #endregion Private
 
         #region Public
-        /// <summary>
-        /// Crea un nuovo watcher
-        /// </summary>
-        /// <param name="folder"></param>
-        /// <param name="extension">format: .txt</param>
-        /// <param name="timerMS"></param>
-        /// <param name="notifyAction"></param>
-        /// <param name="recursive"></param>
-
+      
         public FileWatcher(string folder, string extension /* ".txt" */, int timerMS, Action<IEnumerable<string>> notifyAction, bool recursive = true)
         {
             RootFolderPath = folder;
@@ -55,7 +46,6 @@ namespace MecalFileWatcher
             _recursive = recursive;
 
             _directoryContainer = new FWDirectoryContainer(RootFolderPath, _extension, _recursive);
-            //_directoryContainer.Populate();
 
             _timer = new System.Timers.Timer(_timerMS);
             _timer.Elapsed += onTimedEvent;

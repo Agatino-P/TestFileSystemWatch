@@ -72,11 +72,17 @@ namespace MecalFileWatcher
 
         public IEnumerable<string> GetFiles() => _files;
         
-        public Dictionary<string, FWDirectory> GetFileEntriesRecursive()
-        {
+        public Dictionary<string, FWDirectory> GetFileEntries()
+            {
             Dictionary<string, FWDirectory> recursiveFiles = new Dictionary<string, FWDirectory>();
             foreach (string file in _files)
                 recursiveFiles.Add(file, this);
+            return recursiveFiles;
+        }
+
+        public Dictionary<string, FWDirectory> GetFileEntriesRecursive()
+        {
+            Dictionary<string, FWDirectory> recursiveFiles = GetFileEntries();
             foreach(FWDirectory subDir in _subDirs)
             {
                 recursiveFiles.AddRange(subDir.GetFileEntriesRecursive());
@@ -125,59 +131,12 @@ namespace MecalFileWatcher
             _files.RemoveIfPresent(fullFilePath);
         }
 
-        /*
-         * public void DirectoryChange(string fullPath)
-                {
-                    if (fullPath != this.FullPath)
-                    {
-                        try
-                        {
-                            if (Directory.Exists(fullPath))
-                            {
-                                addSubDir(fullPath);
-                            }
-                            else
-                            {
-                                delSubDir(fullPath);
-                            }
-
-                        }
-                        catch (Exception ex)
-                        {
-
-                            logException(ex);
-                        }
-                        if (true)
-                        {
-                            ;
-                        }
-                        return;
-                    }
-
-                    if (!Directory.Exists(_fullPath))
-                    {
-                        //FWDirectory parentDir = getParentDir(_fullPath);
-                        //parentDir.delSubDir(_fullPath);
-                    }
-                }
-
-                */
-        public IEnumerable<string> ClearRecursive()
+        internal void RemoveDir(FWDirectory subDir)
         {
-            List<string> changedFiles = new List<string>(_files);
-            _files.Clear();
-
-            foreach (FWDirectory subdir in _subDirs)
-            {
-                changedFiles.AddRange(subdir.ClearRecursive());
-            }
-            _subDirs.Clear();
-            return changedFiles;
+            _subDirs.RemoveIfPresent(subDir);
         }
 
-
         #endregion Changes
-
 
         #region Private
 
@@ -232,7 +191,7 @@ namespace MecalFileWatcher
         {
             Debug.Print(ex.Message);
         }
+
         #endregion Logging
     }
-
 }
