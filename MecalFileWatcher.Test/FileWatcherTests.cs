@@ -37,15 +37,10 @@ namespace MecalFileWatcher.Test
 
         private bool enumsMatch(IEnumerable<string> received, IEnumerable<string> expected)
         {
-            IEnumerable<int> t1 = new int[] { 1, 3 };
-            IEnumerable<int> t2 = new int[] {2, 3 };
-            IEnumerable<int> tdiff1 = t1.Except(t2);
-            IEnumerable<int> tdiff2 = t2.Except(t1);
-
-            Enumerable.SequenceEqual(received.OrderBy(t => t), expected.OrderBy(t => t));
             if (received.Count() != expected.Count())
                 return false;
-            return (received.Except(expected)).Count() == 0;
+            return Enumerable.SequenceEqual(received.OrderBy(t => t), expected.OrderBy(t => t));
+            
         }
     }
 }
